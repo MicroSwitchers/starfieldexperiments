@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced 5D Space Field Experience</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: black; }
+        #info {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 18px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">Hold SPACE to activate the 5D field<br>Move your mouse to navigate dimensions</div>
+    <script>
+        let scene, camera, renderer, geometry, material, particles;
+        let isSpaceDown = false;
+        let velocity = 0;
+        const maxVelocity = 0.1;
+        const acceleration = 0.01;
+        const deceleration = 0.005;
+        let mouseX = 0, mouseY = 0;
+        let time = 0;
+
+        const sound = new Howl({
+            src: ['https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.spatial.min.js'],
+            loop: true,
+            volume: 0.5
+        });
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(20000 * 3);
+            const colors = new Float32Array(20000 * 3);
+            const sizes = new Float32Array(20000);
+
+            for (let i = 0; i < positions.length; i += 3) {
+                positions[i] = Math.random() * 400 - 200;
+                positions[i + 1] = Math.random() * 400 - 200;
+                positions[i + 2] = Math.random() * 400 - 200;
+                colors[i] = Math.random();
+                colors[i + 1] = Math.random();
+                colors[i + 2] = Math.random();
+                sizes[i / 3] = Math.random() * 2 + 1;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+            material = new THREE.PointsMaterial({
+                size: 2,
+                vertexColors: true,
+                sizeAttenuation: true
+            });
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+
+            camera.position.z = 100;
+
+            sound.play();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            time += 0.01;
+
+            if (isSpaceDown && velocity < maxVelocity) {
+                velocity += acceleration;
+                sound.rate(1 + velocity);
+            } else if (!isSpaceDown && velocity > 0) {
+                velocity -= deceleration;
+                if (velocity < 0) velocity = 0;
+                sound.rate(1 + velocity);
+            }
+
+            const positions = particles.geometry.attributes.position.array;
+            const colors = particles.geometry.attributes.color.array;
+            const sizes = particles.geometry.attributes.size.array;
+
+            for (let i = 0; i < positions.length; i += 3) {
+                positions[i] += Math.sin(time + i) * velocity;
+                positions[i + 1] += Math.cos(time + i) * velocity;
+                positions[i + 2] += Math.sin(time + i) * velocity;
+
+                // Color shifting based on mouse position
+                colors[i] = (Math.sin(time + i + mouseX * 0.001) + 1) / 2;
+                colors[i + 1] = (Math.cos(time + i + mouseY * 0.001) + 1) / 2;
+                colors[i + 2] = (Math.sin(time + i * 2) + 1) / 2;
+
+                // Pulsating particle size
+                sizes[i / 3] = (Math.sin(time + i * 0.1) + 2) * 2;
+
+                // Occasional "dimensional rifts"
+                if (Math.random() < 0.0001) {
+                    positions[i] = Math.random() * 400 - 200;
+                    positions[i + 1] = Math.random() * 400 - 200;
+                    positions[i + 2] = Math.random() * 400 - 200;
+                }
+            }
+
+            particles.geometry.attributes.position.needsUpdate = true;
+            particles.geometry.attributes.color.needsUpdate = true;
+            particles.geometry.attributes.size.needsUpdate = true;
+
+            // Rotation and camera movement based on mouse position
+            particles.rotation.x += 0.001 * velocity / maxVelocity + mouseY * 0.0001;
+            particles.rotation.y += 0.002 * velocity / maxVelocity + mouseX * 0.0001;
+            camera.position.x += (mouseX - camera.position.x) * 0.05;
+            camera.position.y += (-mouseY - camera.position.y) * 0.05;
+            camera.lookAt(scene.position);
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function onMouseMove(event) {
+            mouseX = event.clientX - window.innerWidth / 2;
+            mouseY = event.clientY - window.innerHeight / 2;
+        }
+
+        window.addEventListener('resize', onWindowResize);
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('keydown', (event) => {
+            if (event.code === 'Space') {
+                isSpaceDown = true;
+            }
+        });
+        window.addEventListener('keyup', (event) => {
+            if (event.code === 'Space') {
+                isSpaceDown = false;
+            }
+        });
+
+        init();
+        animate();
+    </script>
+</body>
+</html>
